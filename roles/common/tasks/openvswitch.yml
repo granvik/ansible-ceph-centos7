@@ -1,0 +1,30 @@
+---
+- name: Add RDO repo
+  yum_repository:
+    name: "openstack-ocata"
+    description: OpenStack Ocata Repository
+    file: rdo
+    baseurl: http://mirror.centos.org/centos/7/cloud/$basearch/openstack-ocata/
+#    gpgkey: http://mirror.centos.org/centos/RPM-GPG-KEY-CentOS-7
+#    gpgkey: https://github.com/rdo-infra/rdo-release/blob/ocata-rdo/RPM-GPG-KEY-CentOS-SIG-Virtualization-RDO
+    gpgkey: https://raw.githubusercontent.com/rdo-infra/rdo-release/ocata-rdo/RPM-GPG-KEY-CentOS-SIG-Cloud
+    gpgcheck: yes
+    enabled: no 
+
+- name: Install OpenVSwitch
+  yum:
+    name: openvswitch
+    enablerepo: "openstack-ocata"
+    state: present
+
+- name: OpenVSwitch service state
+  service: name=openvswitch state=started enabled=yes
+
+- name: Disable NetworkManager
+  service: name=NetworkManager state=stopped enabled=no
+
+- name: Enable Network Daemon
+  service: name=network state=started enabled=yes
+
+#ovs-vsctl add-br ovs-br0
+#ovs-vsctl add-port ovs-br0 enp.... enp....   

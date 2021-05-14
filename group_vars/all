@@ -1,0 +1,11 @@
+---
+sshd_port: 22
+
+admin_email: aradm@aradm.ru
+
+ceph_release: kraken
+ceph_user: cephuser
+
+fusioninventory_server: https://inventory.aradm.ru/plugins/fusioninventory/
+
+netxms_server: 10.29.0.25

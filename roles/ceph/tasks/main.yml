@@ -1,0 +1,60 @@
+---
+# This playbook will install ceph-deploy.
+
+#- name: Add Ceph repository
+#  template: src=ceph-deploy.repo.j2 dest=/etc/yum.repos.d/ceph-deploy.repo
+
+- name: Add Ceph repository
+  yum_repository:
+    name: "ceph-noarch"
+    file: "ceph-deploy"
+    description: "Ceph noarch packages"
+    baseurl: https://download.ceph.com/rpm-{{ ceph_release }}/el7/noarch
+    enabled: yes
+    gpgcheck: yes
+    gpgkey: https://download.ceph.com/keys/release.asc
+#type=rpm-md
+
+
+- name: Install yum-plugin-priorities
+  yum: name=yum-plugin-priorities state=present
+
+- name: Install ceph-deploy package
+  yum: name=ceph-deploy state=present
+
+- user:
+    name: "{{ ceph_user }}"
+    comment: "Ceph user"
+    uid: 1555
+    group: adm
+    password: ________________________________!YOUR_PASSWORD_HASH!_______________________________
+
+# Disable SELinux
+- selinux:
+    state: disabled
+
+- sysctl:
+    name: kernel.pid_max
+    value: 4194303
+    state: present
+
+- name: Add sudoers
+  template: src=sudoers_d_ceph.j2 dest=/etc/sudoers.d/ceph
+
+- acl:
+    path: /etc/sudoers.d/ceph
+    entity: ---
+    etype: other
+#    permissions: rwx
+    state: present
+
+# Для MON
+- firewalld:
+    port: 6789/tcp
+    permanent: true
+    state: enabled
+# Для OSD
+- firewalld:
+    port: 6800-7300/tcp
+    permanent: true
+    state: enabled

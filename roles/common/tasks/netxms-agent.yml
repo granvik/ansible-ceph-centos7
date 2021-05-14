@@ -1,0 +1,34 @@
+---
+- name: Copy nxgentd.conf
+  copy: src=nxagentd.conf dest=/etc/nxagentd.conf
+
+- file:
+    path: /opt/scripts
+    state: directory
+    mode: 0755
+
+- name: Copy script get_disk_smart_attr.sh
+  copy: src=get_disk_smart_attr.sh dest=/opt/scripts/get_disk_smart_attr.sh mode=0755
+
+- name: Copy netxms-agent packages to server
+  copy: src=netxms-{{ item }}-{{ netxms_version }}-el7.x86_64.rpm dest=/tmp/netxms-{{ item }}-{{ netxms_version }}-el7.x86_64.rpm
+  with_items:
+    - base
+    - agent
+
+- name: Install netxms-agent packages
+  with_items:
+    - base
+    - agent
+  yum:
+    name: /tmp/netxms-{{ item }}-{{ netxms_version }}-el7.x86_64.rpm
+    state: present
+
+- name: Firewalld rules for netxms server
+  firewalld:
+    rich_rule: 'rule family="ipv4" source address="{{ netxms_server }}/32" port port="4700" protocol="tcp" accept'
+    permanent: true
+    state: enabled
+
+- name: Nxagentd service state
+  service: name=nxagentd state=started enabled=yes

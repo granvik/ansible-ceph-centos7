@@ -1,0 +1,10 @@
+---
+- name: Install CEPH
+  hosts: ceph
+  remote_user: root
+  # remote_user: user
+  # sudo: yes
+
+  roles:
+    - common
+    - ceph

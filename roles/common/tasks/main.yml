@@ -1,0 +1,106 @@
+---
+#- name: Copy the EPEL repository definition
+#  copy: src=epel.repo dest=/etc/yum.repos.d/
+- name: Add EPEL repository
+  yum_repository:
+    name: epel
+    description: EPEL repo
+    baseurl: https://download.fedoraproject.org/pub/epel/$releasever/$basearch/
+    gpgkey: https://getfedora.org/static/352C64E5.txt
+    file: epel
+
+#- name: Create the GPG key for EPEL
+#  copy: src=RPM-GPG-KEY-EPEL-7 dest=/etc/pki/rpm-gpg
+
+- name: Install NTPD
+  yum: name=ntp state=present
+
+- name: Copy NTP config
+  copy: src=ntp.conf dest=/etc/
+
+- name: NTPD service state
+  service: name=ntpd state=started enabled=yes
+
+- name: Install Firewalld
+  yum: name=firewalld state=present
+
+- name: Firewalld service state
+  service: name=firewalld state=started enabled=yes
+
+- name: Insert firewalld rule
+  firewalld: port={{ sshd_port }}/tcp permanent=true state=enabled immediate=yes
+  ignore_errors: yes
+
+#- name: Create .ssh dir for root
+#  command: creates /root/.ssh
+
+- name: Copy SSHD config
+  template: src=sshd_config.j2 dest=/etc/ssh/sshd_config
+
+- name: Copy admins SSH-keys
+  copy: src=authorized_keys dest=/root/.ssh/
+
+- name: Other Utilites
+  yum: name={{ item }} state=present
+  with_items:
+   - tcpdump
+   - rsync
+   - vim-enhanced
+   - mc
+   - telnet
+
+- name: Disable IPv6
+  copy: src=01-disable_ipv6.conf dest=/etc/sysctl.d/
+
+- name: Disable IPv6 in Postfix_
+  lineinfile:
+    dest: /etc/postfix/main.cf
+#    path: /etc/postfix/main.cf
+    regexp: '^inet_protocols.*'
+    line: 'inet_protocols = ipv4'
+
+- name: Upgrade all packages
+  yum:
+    name: '*'
+    state: latest
+
+- name: Install fusioninventory
+  yum: name={{ item }} state=present
+  with_items:
+   - fusioninventory-agent
+   - fusioninventory-agent-task-inventory
+   - fusioninventory-agent-task-network
+- name: Copy fusioninventory-agent config
+  template: src=agent.cfg.j2 dest=/etc/fusioninventory/agent.cfg
+- firewalld:
+    port: 62354/tcp
+    permanent: true
+    state: enabled
+
+- name: Fusioninventory-agent service state
+  service: name=fusioninventory-agent state=started enabled=yes
+
+- name: Smartd daemon config change
+  lineinfile:
+    dest: /etc/smartmontools/smartd.conf
+#    path: 
+    regexp: '^DEVICESCAN.*'
+    line: 'DEVICESCAN -a -o on -S on -n standby,q -s (S/../.././02|L/../../6/03) -W 4,42,50 -m {{ admin_email }}'
+
+- name: Add email address to forward root mail (if .forward file does not exists)
+  lineinfile:
+#    path: /root/.forward
+    state: present
+    create: yes
+    dest: /root/.forward
+    line: '{{ admin_email }}'
+
+- name: Auto detect sensors and save config
+  command: /usr/sbin/sensors-detect --auto
+
+
+- include: netxms-agent.yml
+  vars:
+    netxms_version: 2.0.8
+
+- include: openvswitch.yml
